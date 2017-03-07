@@ -4,6 +4,8 @@ import (
 	"flag"
 	"fmt"
 	"strings"
+
+	"github.com/fsnotify/fsnotify"
 )
 
 type StartCommand struct {
@@ -54,6 +56,43 @@ func (c *StartCommand) Run(args []string) int {
 	// process
 
 	c.Ui.Output(fmt.Sprintf("%s, %s, %s", src, dest, pid))
+
+	watcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		c.Ui.Error(fmt.Sprintf("failed to start lsync agent. cause: %s", err))
+		return int(ExitCodeError)
+	}
+	defer watcher.Close()
+
+	done := make(chan bool)
+	go func() {
+		for {
+			select {
+			case event := <-watcher.Events:
+				switch {
+				case event.Op&fsnotify.Create == fsnotify.Create:
+					c.Ui.Output(fmt.Sprintf("%s", event.Name))
+				case event.Op&fsnotify.Write == fsnotify.Write:
+					c.Ui.Output(fmt.Sprintf("%s", event.Name))
+				case event.Op&fsnotify.Remove == fsnotify.Remove:
+					c.Ui.Output(fmt.Sprintf("%s", event.Name))
+				case event.Op&fsnotify.Rename == fsnotify.Rename:
+					c.Ui.Output(fmt.Sprintf("%s", event.Name))
+				case event.Op&fsnotify.Chmod == fsnotify.Chmod:
+					c.Ui.Output(fmt.Sprintf("%s", event.Name))
+				}
+			case err := <-watcher.Errors:
+				c.Ui.Output(fmt.Sprintf("error occurred. %s", err))
+			}
+		}
+	}()
+
+	err = watcher.Add(src)
+	if err != nil {
+		c.Ui.Error(fmt.Sprintf("failed to start watching. cause: %s", err))
+		return int(ExitCodeError)
+	}
+	<-done
 
 	return int(ExitCodeOK)
 }
