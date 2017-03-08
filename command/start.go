@@ -3,6 +3,7 @@ package command
 import (
 	"flag"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/fsnotify/fsnotify"
@@ -57,6 +58,17 @@ func (c *StartCommand) Run(args []string) int {
 
 	c.Ui.Output(fmt.Sprintf("%s, %s, %s", src, dest, pid))
 
+	pidFile, err := os.Create(pid)
+	if err != nil {
+		c.Ui.Error(fmt.Sprintf("failed to create pid file. cause: %s", err))
+		return int(ExitCodeError)
+	}
+	pidFileInfo, err := pidFile.Stat()
+	if err != nil {
+		c.Ui.Error(fmt.Sprintf("failed to get stat of pid file. cause: %s", err))
+		return int(ExitCodeError)
+	}
+
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf("failed to start lsync agent. cause: %s", err))
@@ -76,6 +88,9 @@ func (c *StartCommand) Run(args []string) int {
 					c.Ui.Output(fmt.Sprintf("%s", event.Name))
 				case event.Op&fsnotify.Remove == fsnotify.Remove:
 					c.Ui.Output(fmt.Sprintf("%s", event.Name))
+					if event.Name == pidFileInfo.Name() {
+						done <- true
+					}
 				case event.Op&fsnotify.Rename == fsnotify.Rename:
 					c.Ui.Output(fmt.Sprintf("%s", event.Name))
 				case event.Op&fsnotify.Chmod == fsnotify.Chmod:
@@ -89,9 +104,16 @@ func (c *StartCommand) Run(args []string) int {
 
 	err = watcher.Add(src)
 	if err != nil {
-		c.Ui.Error(fmt.Sprintf("failed to start watching. cause: %s", err))
+		c.Ui.Error(fmt.Sprintf("failed to start watching SRC. cause: %s", err))
 		return int(ExitCodeError)
 	}
+
+	err = watcher.Add(pid)
+	if err != nil {
+		c.Ui.Error(fmt.Sprintf("failed to start watching pid file. cause: %s", err))
+		return int(ExitCodeError)
+	}
+
 	<-done
 
 	return int(ExitCodeOK)
