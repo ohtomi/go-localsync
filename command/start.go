@@ -56,8 +56,8 @@ func (c *StartCommand) Run(args []string) int {
 		dest string
 
 		pid       string
-		verbose   bool
 		recursive bool
+		verbose   bool
 	)
 
 	flags := flag.NewFlagSet("start", flag.ContinueOnError)
@@ -67,10 +67,9 @@ func (c *StartCommand) Run(args []string) int {
 
 	flags.StringVar(&pid, "pid", DefaultPid, "")
 	flags.StringVar(&pid, "p", DefaultPid, "")
-	flags.BoolVar(&verbose, "verbose", false, "")
-	flags.BoolVar(&verbose, "v", false, "")
 	flags.BoolVar(&recursive, "recursive", false, "")
 	flags.BoolVar(&recursive, "r", false, "")
+	flags.BoolVar(&verbose, "verbose", false, "")
 
 	if err := flags.Parse(args); err != nil {
 		return int(ExitCodeParseFlagsError)
@@ -169,7 +168,9 @@ func (c *StartCommand) Help() string {
 	helpText := `usage: lsync start [options...] SRC DEST
 
 Options:
-	--pid, -p   Path to process id file for the agent.
+  --pid, -p        Path to process id file for the agent.
+  --recursive, -r  Watch recursively under SRC.
+  --verbose        Report watch event.
 `
 	return strings.TrimSpace(helpText)
 }

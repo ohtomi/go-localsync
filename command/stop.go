@@ -62,7 +62,7 @@ func (c *StopCommand) Help() string {
 	helpText := `usage: lsync stop [options...]
 
 Options:
-	--pid, -p   Path to process id file for the agent.
+  --pid, -p   Path to process id file for the agent.
 `
 	return strings.TrimSpace(helpText)
 }
