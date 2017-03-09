@@ -13,13 +13,51 @@ type StartCommand struct {
 	Meta
 }
 
+func (c *StartCommand) ProcessCreate(filename string, pid string, verbose bool) bool {
+	if verbose {
+		c.Ui.Output(fmt.Sprintf("created %s", filename))
+	}
+
+	return false
+}
+
+func (c *StartCommand) ProcessWrite(filename string, pid string, verbose bool) bool {
+	if verbose {
+		c.Ui.Output(fmt.Sprintf("modified %s", filename))
+	}
+
+	return false
+}
+
+func (c *StartCommand) ProcessRemove(filename string, pid string, verbose bool) bool {
+	if verbose {
+		c.Ui.Output(fmt.Sprintf("removed %s", filename))
+	}
+
+	return filename == pid
+}
+
+func (c *StartCommand) ProcessRename(filename string, pid string, verbose bool) bool {
+	if verbose {
+		c.Ui.Output(fmt.Sprintf("renamed %s", filename))
+	}
+
+	return false
+}
+
+func (c *StartCommand) ProcessChmod(filename string, pid string, verbose bool) bool {
+	return false
+}
+
 func (c *StartCommand) Run(args []string) int {
 
 	var (
 		src  string
 		dest string
 
-		pid string
+		pid       string
+		verbose   bool
+		recursive bool
 	)
 
 	flags := flag.NewFlagSet("start", flag.ContinueOnError)
@@ -29,6 +67,10 @@ func (c *StartCommand) Run(args []string) int {
 
 	flags.StringVar(&pid, "pid", DefaultPid, "")
 	flags.StringVar(&pid, "p", DefaultPid, "")
+	flags.BoolVar(&verbose, "verbose", false, "")
+	flags.BoolVar(&verbose, "v", false, "")
+	flags.BoolVar(&recursive, "recursive", false, "")
+	flags.BoolVar(&recursive, "r", false, "")
 
 	if err := flags.Parse(args); err != nil {
 		return int(ExitCodeParseFlagsError)
@@ -83,18 +125,15 @@ func (c *StartCommand) Run(args []string) int {
 			case event := <-watcher.Events:
 				switch {
 				case event.Op&fsnotify.Create == fsnotify.Create:
-					c.Ui.Output(fmt.Sprintf("%s", event.Name))
+					done <- c.ProcessCreate(event.Name, pidFileInfo.Name(), verbose)
 				case event.Op&fsnotify.Write == fsnotify.Write:
-					c.Ui.Output(fmt.Sprintf("%s", event.Name))
+					done <- c.ProcessWrite(event.Name, pidFileInfo.Name(), verbose)
 				case event.Op&fsnotify.Remove == fsnotify.Remove:
-					c.Ui.Output(fmt.Sprintf("%s", event.Name))
-					if event.Name == pidFileInfo.Name() {
-						done <- true
-					}
+					done <- c.ProcessRemove(event.Name, pidFileInfo.Name(), verbose)
 				case event.Op&fsnotify.Rename == fsnotify.Rename:
-					c.Ui.Output(fmt.Sprintf("%s", event.Name))
+					done <- c.ProcessRename(event.Name, pidFileInfo.Name(), verbose)
 				case event.Op&fsnotify.Chmod == fsnotify.Chmod:
-					c.Ui.Output(fmt.Sprintf("%s", event.Name))
+					done <- c.ProcessChmod(event.Name, pidFileInfo.Name(), verbose)
 				}
 			case err := <-watcher.Errors:
 				c.Ui.Output(fmt.Sprintf("error occurred. %s", err))
@@ -114,9 +153,12 @@ func (c *StartCommand) Run(args []string) int {
 		return int(ExitCodeError)
 	}
 
-	<-done
-
-	return int(ExitCodeOK)
+	for {
+		result := <-done
+		if result {
+			return int(ExitCodeOK)
+		}
+	}
 }
 
 func (c *StartCommand) Synopsis() string {
