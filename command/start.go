@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path"
 	"strings"
 
 	"github.com/fsnotify/fsnotify"
@@ -98,6 +99,9 @@ func (c *StartCommand) Run(args []string) int {
 	// process
 
 	c.Ui.Output(fmt.Sprintf("%s, %s, %s", src, dest, pid))
+
+	store := &FileInfoStore{src, []*FileInfo{}}
+	store.Load(recursive)
 
 	pidFile, err := os.Create(pid)
 	if err != nil {
