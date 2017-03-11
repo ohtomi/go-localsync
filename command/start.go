@@ -4,7 +4,6 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"path"
 	"strings"
 
 	"github.com/fsnotify/fsnotify"
@@ -14,40 +13,73 @@ type StartCommand struct {
 	Meta
 }
 
-func (c *StartCommand) ProcessCreate(filename string, pid string, verbose bool) bool {
-	if verbose {
+func (c *StartCommand) ProcessCreate(store *FileInfoStore, filename string, pid string, verbose bool) bool {
+
+	if verbose && filename != pid {
 		c.Ui.Output(fmt.Sprintf("created %s", filename))
 	}
 
+	if err := store.Add(filename); err != nil {
+		c.Ui.Error(fmt.Sprintf("error occurred. %s", err))
+		return true
+	}
+
+	// TODO copy it to DEST
+
 	return false
 }
 
-func (c *StartCommand) ProcessWrite(filename string, pid string, verbose bool) bool {
-	if verbose {
+func (c *StartCommand) ProcessWrite(store *FileInfoStore, filename string, pid string, verbose bool) bool {
+
+	if verbose && filename != pid {
 		c.Ui.Output(fmt.Sprintf("modified %s", filename))
 	}
 
+	// TODO copy it to DEST
+
 	return false
 }
 
-func (c *StartCommand) ProcessRemove(filename string, pid string, verbose bool) bool {
-	if verbose {
+func (c *StartCommand) ProcessRemove(store *FileInfoStore, filename string, pid string, verbose bool) bool {
+
+	if verbose && filename != pid {
 		c.Ui.Output(fmt.Sprintf("removed %s", filename))
 	}
+
+	if err := store.Remove(filename); err != nil {
+		c.Ui.Error(fmt.Sprintf("error occurred. %s", err))
+		return true
+	}
+
+	// TODO remove it from DEST
 
 	return filename == pid
 }
 
-func (c *StartCommand) ProcessRename(filename string, pid string, verbose bool) bool {
-	if verbose {
+func (c *StartCommand) ProcessRename(store *FileInfoStore, filename string, pid string, verbose bool) bool {
+
+	if verbose && filename != pid {
 		c.Ui.Output(fmt.Sprintf("renamed %s", filename))
 	}
+
+	if err := store.Remove(filename); err != nil {
+		c.Ui.Error(fmt.Sprintf("error occurred. %s", err))
+		return true
+	}
+
+	// TODO remove it from DEST
 
 	return false
 }
 
-func (c *StartCommand) ProcessChmod(filename string, pid string, verbose bool) bool {
+func (c *StartCommand) ProcessChmod(store *FileInfoStore, filename string, pid string, verbose bool) bool {
 	return false
+}
+
+func (c *StartCommand) ProcessError(err error) bool {
+
+	c.Ui.Error(fmt.Sprintf("error occurred. %s", err))
+	return true
 }
 
 func (c *StartCommand) Run(args []string) int {
@@ -128,18 +160,18 @@ func (c *StartCommand) Run(args []string) int {
 			case event := <-watcher.Events:
 				switch {
 				case event.Op&fsnotify.Create == fsnotify.Create:
-					done <- c.ProcessCreate(event.Name, pidFileInfo.Name(), verbose)
+					done <- c.ProcessCreate(store, event.Name, pidFileInfo.Name(), verbose)
 				case event.Op&fsnotify.Write == fsnotify.Write:
-					done <- c.ProcessWrite(event.Name, pidFileInfo.Name(), verbose)
+					done <- c.ProcessWrite(store, event.Name, pidFileInfo.Name(), verbose)
 				case event.Op&fsnotify.Remove == fsnotify.Remove:
-					done <- c.ProcessRemove(event.Name, pidFileInfo.Name(), verbose)
+					done <- c.ProcessRemove(store, event.Name, pidFileInfo.Name(), verbose)
 				case event.Op&fsnotify.Rename == fsnotify.Rename:
-					done <- c.ProcessRename(event.Name, pidFileInfo.Name(), verbose)
+					done <- c.ProcessRename(store, event.Name, pidFileInfo.Name(), verbose)
 				case event.Op&fsnotify.Chmod == fsnotify.Chmod:
-					done <- c.ProcessChmod(event.Name, pidFileInfo.Name(), verbose)
+					done <- c.ProcessChmod(store, event.Name, pidFileInfo.Name(), verbose)
 				}
 			case err := <-watcher.Errors:
-				c.Ui.Output(fmt.Sprintf("error occurred. %s", err))
+				done <- c.ProcessError(err)
 			}
 		}
 	}()
