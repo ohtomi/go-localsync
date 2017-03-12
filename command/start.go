@@ -130,6 +130,11 @@ func (c *StartCommand) Run(args []string) int {
 
 	// process
 
+	if same, err := FilePath(src).IsSameFilePath(FilePath(dest)); same || err != nil {
+		c.Ui.Error("SRC is DEST.")
+		return int(ExitCodeBadArgs)
+	}
+
 	c.Ui.Output(fmt.Sprintf("%s, %s, %s", src, dest, pid))
 
 	store := &FileInfoStore{src, []*FileInfo{}}
