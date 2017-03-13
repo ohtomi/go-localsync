@@ -1,21 +1,21 @@
 package command
 
 import (
-	"os"
+	"path/filepath"
 )
 
 type FilePath string
 
 func (f FilePath) IsSameFilePath(other FilePath) (bool, error) {
-	info1, err := os.Stat(string(f))
+	abs1, err := filepath.Abs(string(f))
 	if err != nil {
 		return false, err
 	}
 
-	info2, err := os.Stat(string(other))
+	abs2, err := filepath.Abs(string(other))
 	if err != nil {
 		return false, err
 	}
 
-	return info1.Name() == info2.Name(), nil
+	return abs1 == abs2, nil
 }
