@@ -16,6 +16,12 @@ $ lsync start /path/to/src /path/to/dest
 
 $ lsync start --pid /path/to/pid.file /path/to/src /path/to/dest
 
+$ lsync start --verbose /path/to/src /path/to/dest
+
+$ lsync start --recursive /path/to/src /path/to/dest
+
+$ lsync stop
+
 $ lsync stop --pid /path/to/pid.file
 
 ```
