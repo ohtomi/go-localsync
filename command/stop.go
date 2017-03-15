@@ -3,7 +3,6 @@ package command
 import (
 	"flag"
 	"fmt"
-	"os"
 	"strings"
 )
 
@@ -35,18 +34,7 @@ func (c *StopCommand) Run(args []string) int {
 
 	// process
 
-	pidFileInfo, err := os.Stat(pid)
-	if err != nil {
-		c.Ui.Error(fmt.Sprintf("failed to get info of pid file. cause: %s", err))
-		return int(ExitCodeError)
-	}
-
-	if pidFileInfo == nil {
-		return int(ExitCodeOK)
-	}
-
-	err = os.Remove(pid)
-	if err != nil {
+	if err := DeletePidFile(pid); err != nil {
 		c.Ui.Error(fmt.Sprintf("failed to remove pid file. cause: %s", err))
 		return int(ExitCodeError)
 	}
