@@ -3,6 +3,7 @@ package command
 import (
 	"flag"
 	"fmt"
+	"path/filepath"
 	"strings"
 
 	"github.com/fsnotify/fsnotify"
@@ -128,6 +129,18 @@ func (c *StartCommand) Run(args []string) int {
 	}
 
 	// process
+
+	src, err := filepath.EvalSymlinks(src)
+	if err != nil {
+		c.Ui.Error(fmt.Sprintf("failed to resolve SRC. cause: %s", err))
+		return int(ExitCodeError)
+	}
+
+	dest, err = filepath.EvalSymlinks(dest)
+	if err != nil {
+		c.Ui.Error(fmt.Sprintf("failed to resolve DEST. cause: %s", err))
+		return int(ExitCodeError)
+	}
 
 	if FilePath(src).IsSameFilePath(FilePath(dest)) {
 		c.Ui.Error("SRC is DEST.")
