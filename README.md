@@ -38,7 +38,7 @@ Or get binary from [release page](../../releases/latest).
 
 ## Contribution
 
-1. Fork ([https://github.com/ohtomi/scrapbox/fork](https://github.com/ohtomi/go-localsync/fork))
+1. Fork ([https://github.com/ohtomi/go-localsync/fork](https://github.com/ohtomi/go-localsync/fork))
 1. Create a feature branch
 1. Commit your changes
 1. Rebase your local changes against the master branch
