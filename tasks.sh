@@ -30,7 +30,7 @@ case "$1" in
   "test")
     echo
     echo testing ...
-    env go test github.com/ohtomi/go-localsync/command -v
+    env go test ./... -v
     ;;
   "install")
     go install \
