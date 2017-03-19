@@ -7,6 +7,11 @@ import (
 
 func Commands(meta *command.Meta) map[string]cli.CommandFactory {
 	return map[string]cli.CommandFactory{
+		"watch": func() (cli.Command, error) {
+			return &command.WatchCommand{
+				Meta: *meta,
+			}, nil
+		},
 		"start": func() (cli.Command, error) {
 			return &command.StartCommand{
 				Meta: *meta,
