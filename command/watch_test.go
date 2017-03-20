@@ -30,15 +30,15 @@ func NewTestMeta(outStream, errStream io.Writer, inStream io.Reader) *Meta {
 		}}
 }
 
-func TestStartCommand__dummy(t *testing.T) {
+func TestWatchCommand__dummy(t *testing.T) {
 
 	outStream, errStream, inStream := new(bytes.Buffer), new(bytes.Buffer), strings.NewReader("")
 	meta := NewTestMeta(outStream, errStream, inStream)
-	command := &StartCommand{
+	command := &WatchCommand{
 		Meta: *meta,
 	}
 
-	args := strings.Split("/path/to/src path/to/dest", " ")
+	args := strings.Split("--src /path/to/src --dest path/to/des", " ")
 	exitStatus := command.Run(args)
 	if ExitCode(exitStatus) != ExitCodeOK {
 		t.Fatalf("ExitStatus is %s, but want %s", ExitCode(exitStatus), ExitCodeOK)

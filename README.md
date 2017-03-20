@@ -12,17 +12,11 @@ This is a tool to synchronize two local directories.
 ## Usage
 
 ```bash
-$ lsync start /path/to/src /path/to/dest
+$ lsync watch --src /path/to/src --dest /path/to/dest
 
-$ lsync start --pid /path/to/pid.file /path/to/src /path/to/dest
+$ lsync start --src /path/to/src --dest /path/to/dest --verbose
 
-$ lsync start --verbose /path/to/src /path/to/dest
-
-$ lsync start --recursive /path/to/src /path/to/dest
-
-$ lsync stop
-
-$ lsync stop --pid /path/to/pid.file
+$ lsync start --src /path/to/src --dest /path/to/dest --recursive
 
 ```
 

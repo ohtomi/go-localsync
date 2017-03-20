@@ -11,8 +11,6 @@ const (
 	ExitCodeError
 	ExitCodeParseFlagsError
 	ExitCodeBadArgs
-	ExitCodeSrcNotFound
-	ExitCodeDestNotFound
 )
 
 const (

@@ -12,16 +12,6 @@ func Commands(meta *command.Meta) map[string]cli.CommandFactory {
 				Meta: *meta,
 			}, nil
 		},
-		"start": func() (cli.Command, error) {
-			return &command.StartCommand{
-				Meta: *meta,
-			}, nil
-		},
-		"stop": func() (cli.Command, error) {
-			return &command.StopCommand{
-				Meta: *meta,
-			}, nil
-		},
 
 		"version": func() (cli.Command, error) {
 			return &command.VersionCommand{
