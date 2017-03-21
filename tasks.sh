@@ -1,8 +1,10 @@
 #!/bin/bash
 
+MAIN_PACKAGE=lsync
+
 function usage() {
   echo "
-Usage: $0 [fmt|stringer|build|prep|test|install|package|release]
+Usage: $0 [fmt|stringer|test|package|release]
 "
 }
 
@@ -19,35 +21,25 @@ case "$1" in
     cd command
     stringer -type ExitCode -output meta_exitcode_string.go meta.go
     ;;
-  "build")
-    go build -v \
-      -ldflags "-X main.GitCommit=$(git describe --always)"
-    ;;
-  "prep")
-    echo
-    echo TODO
-    ;;
   "test")
     echo
     echo testing ...
     env go test ./... -v
     ;;
-  "install")
-    go install \
-      -ldflags "-X main.GitCommit=$(git describe --always)"
-    ;;
   "package")
     $0 stringer
 
-    rm -fr ./pkg
+    cd $MAIN_PACKAGE
+    rm -fr ../pkg
     gox \
       -ldflags "-X main.GitCommit=$(git describe --always)" \
       -os="darwin linux windows" \
       -arch="386 amd64" \
-      -output "pkg/{{.OS}}_{{.Arch}}/{{.Dir}}"
+      -output "../pkg/{{.OS}}_{{.Arch}}/{{.Dir}}"
 
     repo=$(grep "const Name " version.go | sed -E 's/.*"(.+)"$/\1/')
     version=$(grep "const Version " version.go | sed -E 's/.*"(.+)"$/\1/')
+    cd ..
 
     rm -fr ./dist/${version}
     mkdir -p ./dist/${version}

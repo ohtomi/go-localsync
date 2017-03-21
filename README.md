@@ -25,7 +25,7 @@ $ lsync start --src /path/to/src --dest /path/to/dest --recursive
 To install, use `go get`:
 
 ```bash
-$ go get -d github.com/ohtomi/go-localsync
+$ go get -d github.com/ohtomi/go-localsync/lsync
 ```
 
 Or get binary from [release page](../../releases/latest).
