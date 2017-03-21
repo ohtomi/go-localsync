@@ -1,4 +1,2 @@
-go-localsync
 pkg/
 dist/
-testdata/
