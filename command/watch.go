@@ -3,14 +3,9 @@ package command
 import (
 	"flag"
 	"fmt"
-	"io"
 	"os"
 	"os/signal"
-	"path"
-	"path/filepath"
 	"strings"
-
-	"github.com/fsnotify/fsnotify"
 )
 
 type WatchCommand struct {
@@ -26,7 +21,7 @@ func (c *WatchCommand) Run(args []string) int {
 		verbose   bool
 	)
 
-	flags := flag.NewFlagSet("start", flag.ContinueOnError)
+	flags := flag.NewFlagSet("watch", flag.ContinueOnError)
 	flags.Usage = func() {
 		c.Ui.Error(c.Help())
 	}
@@ -55,7 +50,7 @@ func (c *WatchCommand) Run(args []string) int {
 
 	// process
 
-	c.Ui.Output(fmt.Sprintf(`starting a watch agent...
+	c.Ui.Output(fmt.Sprintf(`watch file system events
         src: %s
        dest: %s
   recursive: %v
@@ -66,8 +61,15 @@ press Ctrl+C to stop the watch agent.
 
 	interrupted := c.chanToTrapCtrlC()
 
-	if err := c.startWatcher(src, dest, recursive, verbose); err != nil {
-		c.Ui.Error(fmt.Sprintf("failed to start watcher. cause: %q", err))
+	agent, err := NewWatchAgent(src, dest, recursive, verbose, c.Meta)
+	if err != nil {
+		c.Ui.Error(fmt.Sprintf("failed to new the watch agent. cause: %q", err))
+		return int(ExitCodeError)
+	}
+	defer agent.Close()
+
+	if err := agent.Start(); err != nil {
+		c.Ui.Error(fmt.Sprintf("failed to start the watch agent. cause: %q", err))
 		return int(ExitCodeError)
 	}
 
@@ -82,129 +84,6 @@ func (c *WatchCommand) chanToTrapCtrlC() chan os.Signal {
 	return ch
 }
 
-func (c *WatchCommand) startWatcher(src, dest string, recursive, verbose bool) error {
-
-	toAbs := func(rawpath string) string {
-		resolved, err := filepath.EvalSymlinks(rawpath)
-		if err != nil {
-			// TODO
-		}
-		abs, err := filepath.Abs(resolved)
-		if err != nil {
-			// TODO
-		}
-		return abs
-	}
-
-	toRel := func(basepath, targetpath string) string {
-		rel, err := filepath.Rel(toAbs(basepath), toAbs(targetpath))
-		if err != nil {
-			// TODO
-		}
-		return rel
-	}
-
-	createDir := func(dir string) error {
-		// TODO add watcher
-		// TODO copy files if exists (for rename event)
-		return os.MkdirAll(dir, os.ModeDir)
-	}
-
-	// deleteDir := func(dir string) error {
-	// 	// TODO delete watcher
-	// 	return os.RemoveAll(dir)
-	// }
-
-	copyFile := func(srcfile string) error {
-		srcfd, err := os.Open(srcfile)
-		if err != nil {
-			return err
-		}
-		defer srcfd.Close()
-
-		destfile := path.Join(dest, toRel(src, srcfile))
-		destfd, err := os.Create(destfile)
-		if err != nil {
-			return err
-		}
-		defer destfd.Close()
-
-		_, err = io.Copy(destfd, srcfd)
-		if err != nil {
-			return err
-		}
-
-		return nil
-	}
-
-	// deleteFile := func(file string) error {
-	// 	return os.Remove(file)
-	// }
-
-	watcher, err := fsnotify.NewWatcher()
-	if err != nil {
-		return err
-	}
-	defer watcher.Close()
-
-	watch := func(root string) error {
-		err := watcher.Add(root)
-		if err != nil {
-			return err
-		}
-
-		go func() {
-			for {
-				select {
-				case event := <-watcher.Events:
-					switch {
-					case event.Op&fsnotify.Create == fsnotify.Create:
-						c.Ui.Output("create " + event.Name)
-					case event.Op&fsnotify.Write == fsnotify.Write:
-						c.Ui.Output("write " + event.Name)
-					case event.Op&fsnotify.Remove == fsnotify.Remove:
-						c.Ui.Output("remove " + event.Name)
-					case event.Op&fsnotify.Rename == fsnotify.Rename:
-						// TODO
-					case event.Op&fsnotify.Chmod == fsnotify.Chmod:
-						// TODO
-					}
-					// case err := <-watcher.Errors:
-					// TODO
-				}
-			}
-		}()
-
-		return nil
-	}
-
-	walk := func(rawpath string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-
-		if info.IsDir() {
-			if toAbs(rawpath) == toAbs(src) {
-				return watch(rawpath)
-			}
-			if !recursive {
-				return filepath.SkipDir
-			}
-			if err := createDir(rawpath); err != nil {
-				return err
-			}
-			if err := watch(rawpath); err != nil {
-				return err
-			}
-			return nil
-		} else {
-			return copyFile(rawpath)
-		}
-	}
-
-	return filepath.Walk(src, walk)
-}
-
 func (c *WatchCommand) Synopsis() string {
 	return "Watch file system events of the specified directory"
 }
@@ -216,7 +95,7 @@ Options:
   --src, -s        Path to SRC directory.
   --dest, -d       Path to DEST directory.
   --recursive, -r  Watch recursively under SRC.
-  --verbose        Report file system event verbosely.
+  --verbose        Report file system events verbosely.
 `
 	return strings.TrimSpace(helpText)
 }
