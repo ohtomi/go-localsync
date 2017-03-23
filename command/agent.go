@@ -16,6 +16,7 @@ type WatchAgent struct {
 	recursive bool
 	verbose   bool
 	watcher   *fsnotify.Watcher
+	channels  map[string]chan interface{}
 
 	meta Meta
 }
@@ -36,7 +37,7 @@ func NewWatchAgent(src, dest string, recursive, verbose bool, meta Meta) (*Watch
 		return nil, err
 	}
 
-	return &WatchAgent{srcdir, destdir, recursive, verbose, watcher, meta}, nil
+	return &WatchAgent{srcdir, destdir, recursive, verbose, watcher, map[string]chan interface{}{}, meta}, nil
 }
 
 func (w *WatchAgent) Close() error {
@@ -44,6 +45,8 @@ func (w *WatchAgent) Close() error {
 }
 
 func (w *WatchAgent) Start() error {
+	// TODO traverse dest dir to remove difference between src and dest.
+
 	walker := func(rawpath string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
@@ -51,8 +54,10 @@ func (w *WatchAgent) Start() error {
 
 		if info.IsDir() {
 			if w.toAbs(rawpath) == w.toAbs(w.src) {
-				if err := w.watch(rawpath); err != nil {
+				if ch, err := w.watch(rawpath); err != nil {
 					return err
+				} else {
+					w.channels[rawpath] = ch
 				}
 				return nil
 			}
@@ -64,8 +69,10 @@ func (w *WatchAgent) Start() error {
 			if err := w.createDir(rawpath); err != nil {
 				return err
 			}
-			if err := w.watch(rawpath); err != nil {
+			if ch, err := w.watch(rawpath); err != nil {
 				return err
+			} else {
+				w.channels[rawpath] = ch
 			}
 			return nil
 
@@ -84,12 +91,12 @@ func (w *WatchAgent) Stop() error {
 
 //
 
-func (w *WatchAgent) watch(root string) error {
+func (w *WatchAgent) watch(root string) (chan interface{}, error) {
 	if err := w.watcher.Add(root); err != nil {
-		return err
+		return nil, err
 	}
 
-	// TODO break for-loop when unwatch() invoked.
+	ch := make(chan interface{})
 	go func() {
 		for {
 			select {
@@ -108,19 +115,21 @@ func (w *WatchAgent) watch(root string) error {
 				}
 			case err := <-w.watcher.Errors:
 				w.handleErrorEvent(err)
+			case <-ch:
+				return
 			}
 		}
 	}()
 
-	return nil
+	return ch, nil
 }
 
 func (w *WatchAgent) unwatch(root string) error {
-	if err := w.watcher.Remove(root); err != nil {
-		return err
+	done, ok := w.channels[root]
+	if ok {
+		done <- true
+		delete(w.channels, root)
 	}
-
-	// TODO break watcher's for-loop
 
 	return nil
 }
@@ -137,9 +146,11 @@ func (w *WatchAgent) handleCreateEvent(event fsnotify.Event) {
 			w.meta.Ui.Error(fmt.Sprintf("error %s", err))
 			return
 		}
-		if err := w.watch(event.Name); err != nil {
+		if ch, err := w.watch(event.Name); err != nil {
 			w.meta.Ui.Error(fmt.Sprintf("error %s", err))
 			return
+		} else {
+			w.channels[event.Name] = ch
 		}
 		// TODO copy files under the new directory
 	} else {
