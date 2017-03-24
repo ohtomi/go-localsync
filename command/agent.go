@@ -40,10 +40,6 @@ func NewWatchAgent(src, dest string, recursive, verbose bool, meta Meta) (*Watch
 	return &WatchAgent{srcdir, destdir, recursive, verbose, watcher, map[string]chan interface{}{}, meta}, nil
 }
 
-func (w *WatchAgent) Close() error {
-	return w.watcher.Close()
-}
-
 func (w *WatchAgent) Start() error {
 	// TODO traverse dest dir to remove difference between src and dest.
 
@@ -85,8 +81,7 @@ func (w *WatchAgent) Start() error {
 }
 
 func (w *WatchAgent) Stop() error {
-	// TODO
-	return nil
+	return w.watcher.Close()
 }
 
 //

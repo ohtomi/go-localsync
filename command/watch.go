@@ -66,7 +66,7 @@ press Ctrl+C to stop the watch agent.
 		c.Ui.Error(fmt.Sprintf("failed to new the watch agent. cause: %q", err))
 		return int(ExitCodeError)
 	}
-	defer agent.Close()
+	defer agent.Stop()
 
 	if err := agent.Start(); err != nil {
 		c.Ui.Error(fmt.Sprintf("failed to start the watch agent. cause: %q", err))
