@@ -41,6 +41,16 @@ func NewWatchAgent(src, dest string, recursive, verbose bool, meta Meta) (*Watch
 }
 
 func (w *WatchAgent) Start() error {
+	return w.walk(w.src);
+}
+
+func (w *WatchAgent) Stop() error {
+	return w.watcher.Close()
+}
+
+//
+
+func (w *WatchAgent) walk(root string) error {
 	// TODO traverse dest dir to remove difference between src and dest.
 
 	walker := func(rawpath string, info os.FileInfo, err error) error {
@@ -49,7 +59,7 @@ func (w *WatchAgent) Start() error {
 		}
 
 		if info.IsDir() {
-			if w.toAbs(rawpath) == w.toAbs(w.src) {
+			if w.toAbs(rawpath) == w.toAbs(root) {
 				if ch, err := w.watch(rawpath); err != nil {
 					return err
 				} else {
@@ -77,14 +87,8 @@ func (w *WatchAgent) Start() error {
 		}
 	}
 
-	return filepath.Walk(w.src, walker)
+	return filepath.Walk(root, walker)
 }
-
-func (w *WatchAgent) Stop() error {
-	return w.watcher.Close()
-}
-
-//
 
 func (w *WatchAgent) watch(root string) (chan interface{}, error) {
 	if err := w.watcher.Add(root); err != nil {
@@ -141,13 +145,10 @@ func (w *WatchAgent) handleCreateEvent(event fsnotify.Event) {
 			w.meta.Ui.Error(fmt.Sprintf("error %s", err))
 			return
 		}
-		if ch, err := w.watch(event.Name); err != nil {
+		if err := w.walk(event.Name); err != nil {
 			w.meta.Ui.Error(fmt.Sprintf("error %s", err))
 			return
-		} else {
-			w.channels[event.Name] = ch
 		}
-		// TODO copy files under the new directory
 	} else {
 		if err := w.copyFile(event.Name); err != nil {
 			w.meta.Ui.Error(fmt.Sprintf("error %s", err))
@@ -157,6 +158,7 @@ func (w *WatchAgent) handleCreateEvent(event fsnotify.Event) {
 }
 
 func (w *WatchAgent) handleWriteEvent(event fsnotify.Event) {
+	// TODO handle write event after deleting dir having child dir
 	w.meta.Ui.Output(fmt.Sprintf("write %s", event.Name))
 	if err := w.copyFile(event.Name); err != nil {
 		w.meta.Ui.Error(fmt.Sprintf("error %s", err))
