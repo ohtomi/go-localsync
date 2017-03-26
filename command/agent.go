@@ -158,8 +158,32 @@ func (w *WatchAgent) handleCreateEvent(event fsnotify.Event) {
 }
 
 func (w *WatchAgent) handleWriteEvent(event fsnotify.Event) {
-	// TODO handle write event after deleting dir having child dir
 	w.meta.Ui.Output(fmt.Sprintf("write %s", event.Name))
+
+	if _, err := os.Stat(event.Name); err != nil {
+		destpath := path.Join(w.dest, w.toRel(w.src, event.Name))
+		info, err := os.Stat(destpath)
+		if err != nil {
+			return
+		}
+		if info.IsDir() {
+			if err := w.deleteDir(event.Name); err != nil {
+				w.meta.Ui.Error(fmt.Sprintf("error %s", err))
+				return
+			}
+			if err := w.unwatch(event.Name); err != nil {
+				w.meta.Ui.Error(fmt.Sprintf("error %s", err))
+				return
+			}
+		} else {
+			if err := w.deleteFile(event.Name); err != nil {
+				w.meta.Ui.Error(fmt.Sprintf("error %s", err))
+				return
+			}
+		}
+		return
+	}
+
 	if err := w.copyFile(event.Name); err != nil {
 		w.meta.Ui.Error(fmt.Sprintf("error %s", err))
 		return
