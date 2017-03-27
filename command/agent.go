@@ -41,7 +41,7 @@ func NewWatchAgent(src, dest string, recursive, verbose bool, meta Meta) (*Watch
 }
 
 func (w *WatchAgent) Start() error {
-	return w.walk(w.src);
+	return w.walk(w.src)
 }
 
 func (w *WatchAgent) Stop() error {
@@ -161,25 +161,9 @@ func (w *WatchAgent) handleWriteEvent(event fsnotify.Event) {
 	w.meta.Ui.Output(fmt.Sprintf("write %s", event.Name))
 
 	if _, err := os.Stat(event.Name); err != nil {
-		destpath := path.Join(w.dest, w.toRel(w.src, event.Name))
-		info, err := os.Stat(destpath)
-		if err != nil {
+		if err := w.deleteDirOrFile(event); err != nil {
+			w.meta.Ui.Error(fmt.Sprintf("error %s", err))
 			return
-		}
-		if info.IsDir() {
-			if err := w.deleteDir(event.Name); err != nil {
-				w.meta.Ui.Error(fmt.Sprintf("error %s", err))
-				return
-			}
-			if err := w.unwatch(event.Name); err != nil {
-				w.meta.Ui.Error(fmt.Sprintf("error %s", err))
-				return
-			}
-		} else {
-			if err := w.deleteFile(event.Name); err != nil {
-				w.meta.Ui.Error(fmt.Sprintf("error %s", err))
-				return
-			}
 		}
 		return
 	}
@@ -192,49 +176,17 @@ func (w *WatchAgent) handleWriteEvent(event fsnotify.Event) {
 
 func (w *WatchAgent) handleRemoveEvent(event fsnotify.Event) {
 	w.meta.Ui.Output(fmt.Sprintf("remove %s", event.Name))
-	destpath := path.Join(w.dest, w.toRel(w.src, event.Name))
-	info, err := os.Stat(destpath)
-	if err != nil {
+	if err := w.deleteDirOrFile(event); err != nil {
+		w.meta.Ui.Error(fmt.Sprintf("error %s", err))
 		return
-	}
-	if info.IsDir() {
-		if err := w.deleteDir(event.Name); err != nil {
-			w.meta.Ui.Error(fmt.Sprintf("error %s", err))
-			return
-		}
-		if err := w.unwatch(event.Name); err != nil {
-			w.meta.Ui.Error(fmt.Sprintf("error %s", err))
-			return
-		}
-	} else {
-		if err := w.deleteFile(event.Name); err != nil {
-			w.meta.Ui.Error(fmt.Sprintf("error %s", err))
-			return
-		}
 	}
 }
 
 func (w *WatchAgent) handleRenameEvent(event fsnotify.Event) {
 	w.meta.Ui.Output(fmt.Sprintf("rename %s", event.Name))
-	destpath := path.Join(w.dest, w.toRel(w.src, event.Name))
-	info, err := os.Stat(destpath)
-	if err != nil {
+	if err := w.deleteDirOrFile(event); err != nil {
+		w.meta.Ui.Error(fmt.Sprintf("error %s", err))
 		return
-	}
-	if info.IsDir() {
-		if err := w.deleteDir(event.Name); err != nil {
-			w.meta.Ui.Error(fmt.Sprintf("error %s", err))
-			return
-		}
-		if err := w.unwatch(event.Name); err != nil {
-			w.meta.Ui.Error(fmt.Sprintf("error %s", err))
-			return
-		}
-	} else {
-		if err := w.deleteFile(event.Name); err != nil {
-			w.meta.Ui.Error(fmt.Sprintf("error %s", err))
-			return
-		}
 	}
 }
 
@@ -274,6 +226,29 @@ func (w *WatchAgent) copyFile(srcfile string) error {
 	_, err = io.Copy(destfd, srcfd)
 	if err != nil {
 		return err
+	}
+
+	return nil
+}
+
+func (w *WatchAgent) deleteDirOrFile(event fsnotify.Event) error {
+	destpath := path.Join(w.dest, w.toRel(w.src, event.Name))
+	info, err := os.Stat(destpath)
+	if err != nil {
+		return nil
+	}
+
+	if info.IsDir() {
+		if err := w.deleteDir(event.Name); err != nil {
+			return err
+		}
+		if err := w.unwatch(event.Name); err != nil {
+			return err
+		}
+	} else {
+		if err := w.deleteFile(event.Name); err != nil {
+			return err
+		}
 	}
 
 	return nil
