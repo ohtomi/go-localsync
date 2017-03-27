@@ -239,29 +239,19 @@ func (w *WatchAgent) deleteDirOrFile(event fsnotify.Event) error {
 	}
 
 	if info.IsDir() {
-		if err := w.deleteDir(event.Name); err != nil {
+		if err := os.RemoveAll(destpath); err != nil {
 			return err
 		}
 		if err := w.unwatch(event.Name); err != nil {
 			return err
 		}
 	} else {
-		if err := w.deleteFile(event.Name); err != nil {
+		if err := os.Remove(destpath); err != nil {
 			return err
 		}
 	}
 
 	return nil
-}
-
-func (w *WatchAgent) deleteDir(srcdir string) error {
-	destdir := path.Join(w.dest, w.toRel(w.src, srcdir))
-	return os.RemoveAll(destdir)
-}
-
-func (w *WatchAgent) deleteFile(srcfile string) error {
-	destfile := path.Join(w.dest, w.toRel(w.src, srcfile))
-	return os.Remove(destfile)
 }
 
 //
