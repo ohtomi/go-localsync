@@ -66,7 +66,7 @@ case "$1" in
     popd
     ;;
   "release")
-    version=$(grep "const Version " version.go | sed -E 's/.*"(.+)"$/\1/')
+    version=$(grep "const Version " ${MAIN_PACKAGE}/version.go | sed -E 's/.*"(.+)"$/\1/')
     ghr ${version} ./dist/${version}
     ;;
   *)
