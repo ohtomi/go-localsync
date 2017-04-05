@@ -4,7 +4,7 @@ MAIN_PACKAGE=lsync
 
 function usage() {
   echo "
-Usage: $0 [fmt|stringer|test|package|release]
+Usage: $0 [fmt|stringer|compile|test|package|release]
 "
 }
 
@@ -20,6 +20,16 @@ case "$1" in
   "stringer")
     cd command
     stringer -type ExitCode -output meta_exitcode_string.go meta.go
+    ;;
+  "compile")
+    $0 stringer
+
+    cd $MAIN_PACKAGE
+    gox \
+      -ldflags "-X main.GitCommit=$(git describe --always)" \
+      -os="darwin" \
+      -arch="amd64" \
+      -output "../pkg/{{.OS}}_{{.Arch}}/{{.Dir}}"
     ;;
   "test")
     echo
