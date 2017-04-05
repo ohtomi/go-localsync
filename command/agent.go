@@ -51,7 +51,28 @@ func (w *WatchAgent) Stop() error {
 //
 
 func (w *WatchAgent) walk(root string) error {
-	// TODO traverse dest dir to remove difference between src and dest.
+	filepath.Walk(w.dest, func(rawpath string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if info.IsDir() {
+			srcdir := path.Join(w.src, w.toRel(w.dest, rawpath))
+			if _, err := os.Stat(srcdir); err != nil {
+				return os.RemoveAll(rawpath)
+			}
+			if !w.recursive {
+				return filepath.SkipDir
+			}
+			return nil
+		} else {
+			srcfile := path.Join(w.src, w.toRel(w.dest, rawpath))
+			if _, err := os.Stat(srcfile); err != nil {
+				return os.Remove(rawpath)
+			}
+			return nil
+		}
+	})
 
 	walker := func(rawpath string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -59,27 +80,20 @@ func (w *WatchAgent) walk(root string) error {
 		}
 
 		if info.IsDir() {
-			if w.toAbs(rawpath) == w.toAbs(root) {
-				if ch, err := w.watch(rawpath); err != nil {
-					return err
-				} else {
-					w.channels[rawpath] = ch
-				}
-				return nil
-			}
-
-			if !w.recursive {
-				return filepath.SkipDir
-			}
-
 			if err := w.createDir(rawpath); err != nil {
 				return err
 			}
+
 			if ch, err := w.watch(rawpath); err != nil {
 				return err
 			} else {
 				w.channels[rawpath] = ch
 			}
+
+			if w.toAbs(rawpath) != w.toAbs(root) && !w.recursive {
+				return filepath.SkipDir
+			}
+
 			return nil
 
 		} else {
