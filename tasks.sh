@@ -37,7 +37,7 @@ case "$1" in
       -output "${REL_TO_ROOT}/pkg/{{.OS}}_{{.Arch}}/{{.Dir}}"
     ;;
   "test")
-    env "${TEST_ENVIRONMENT}" go test ./... $2
+    env ${TEST_ENVIRONMENT} go test ./... $2
     ;;
   "package")
     $0 stringer
