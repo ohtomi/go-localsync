@@ -38,8 +38,14 @@ func TestWatchCommand__dummy(t *testing.T) {
 		Meta: *meta,
 	}
 
-	args := strings.Split("--src /path/to/src --dest path/to/des", " ")
+	args := []string{"--src", "/path/to/src", "--dest", "/path/to/dest"}
 	exitStatus := command.Run(args)
+
+	if DebugMode {
+		t.Log(outStream.String())
+		t.Log(errStream.String())
+	}
+
 	if ExitCode(exitStatus) != ExitCodeOK {
 		t.Fatalf("ExitStatus is %s, but want %s", ExitCode(exitStatus), ExitCodeOK)
 	}
