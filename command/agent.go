@@ -242,6 +242,21 @@ func (w *WatchAgent) copyFile(srcfile string) error {
 		return err
 	}
 
+	err = destfd.Sync()
+	if err != nil {
+		return err
+	}
+
+	srcinfo, err := os.Stat(srcfile)
+	if err != nil {
+		return err
+	}
+
+	err = os.Chmod(destfile, srcinfo.Mode())
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
