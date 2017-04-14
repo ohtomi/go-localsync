@@ -29,7 +29,7 @@ case "$1" in
   "compile")
     $0 stringer
 
-    cd ${MAIN_PACKAGE}
+    cd "${MAIN_PACKAGE}"
     gox \
       -ldflags "-X main.GitCommit=$(git describe --always)" \
       -os="${GOX_MAIN_OS}" \
@@ -37,14 +37,12 @@ case "$1" in
       -output "${REL_TO_ROOT}/pkg/{{.OS}}_{{.Arch}}/{{.Dir}}"
     ;;
   "test")
-    echo
-    echo testing ...
     env "${TEST_ENVIRONMENT}" go test ./... $2
     ;;
   "package")
     $0 stringer
 
-    cd ${MAIN_PACKAGE}
+    cd "${MAIN_PACKAGE}"
     rm -fr "${REL_TO_ROOT}/pkg"
     gox \
       -ldflags "-X main.GitCommit=$(git describe --always)" \
@@ -54,14 +52,14 @@ case "$1" in
 
     repo=$(grep "const Name " version.go | sed -E 's/.*"(.+)"$/\1/')
     version=$(grep "const Version " version.go | sed -E 's/.*"(.+)"$/\1/')
-    cd ${REL_TO_ROOT}
+    cd "${REL_TO_ROOT}"
 
     rm -fr "./dist/${version}"
     mkdir -p "./dist/${version}"
     for platform in $(find ./pkg -mindepth 1 -maxdepth 1 -type d); do
       platform_name=$(basename ${platform})
       archive_name=${repo}_${version}_${platform_name}
-      pushd ${platform}
+      pushd "${platform}"
       zip "../../dist/${version}/${archive_name}.zip" ./*
       popd
     done
