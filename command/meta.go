@@ -1,6 +1,8 @@
 package command
 
 import (
+	"os"
+
 	"github.com/mitchellh/cli"
 )
 
@@ -11,6 +13,16 @@ const (
 	ExitCodeError
 	ExitCodeParseFlagsError
 	ExitCodeBadArgs
+)
+
+const (
+	EnvDebug       = "LSYNC_DEBUG"
+	EnvLongRunTest = "LSYNC_LONG_RUN_TEST"
+)
+
+var (
+	DebugMode       = os.Getenv(EnvDebug) != ""
+	LongRunTestMode = os.Getenv(EnvLongRunTest) != ""
 )
 
 const (
