@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/mitchellh/cli"
+	"time"
 )
 
 func SetTestEnv(key, newValue string) func() {
@@ -30,23 +31,45 @@ func NewTestMeta(outStream, errStream io.Writer, inStream io.Reader) *Meta {
 		}}
 }
 
-func TestWatchCommand__dummy(t *testing.T) {
+func TestWatchCommand__no_recursive(t *testing.T) {
 
-	outStream, errStream, inStream := new(bytes.Buffer), new(bytes.Buffer), strings.NewReader("")
-	meta := NewTestMeta(outStream, errStream, inStream)
-	command := &WatchCommand{
-		Meta: *meta,
+	go func() {
+		outStream, errStream, inStream := new(bytes.Buffer), new(bytes.Buffer), strings.NewReader("")
+		meta := NewTestMeta(outStream, errStream, inStream)
+		command := &WatchCommand{
+			Meta: *meta,
+		}
+
+		args := []string{"--src", "../testdata/src", "--dest", "../testdata/dest"}
+		exitStatus := command.Run(args)
+
+		if DebugMode {
+			t.Log(outStream.String())
+			t.Log(errStream.String())
+		}
+
+		if ExitCode(exitStatus) != ExitCodeOK {
+			t.Fatalf("ExitStatus is %s, but want %s", ExitCode(exitStatus), ExitCodeOK)
+		}
+	}()
+
+	creator := func(p string) {
+		fd, err := os.Create(p)
+		if err != nil {
+			t.Fatalf("err must be nil, but %+v", err)
+		}
+		defer fd.Close()
 	}
 
-	args := []string{"--src", "/path/to/src", "--dest", "/path/to/dest"}
-	exitStatus := command.Run(args)
+	checker := func(p string) {
+		time.Sleep(10 * time.Millisecond)
 
-	if DebugMode {
-		t.Log(outStream.String())
-		t.Log(errStream.String())
+		_, err := os.Stat(p)
+		if err != nil {
+			t.Fatalf("missing %q", p)
+		}
 	}
 
-	if ExitCode(exitStatus) != ExitCodeOK {
-		t.Fatalf("ExitStatus is %s, but want %s", ExitCode(exitStatus), ExitCodeOK)
-	}
+	creator("../testdata/src/foo")
+	checker("../testdata/dest/foo")
 }

@@ -37,6 +37,8 @@ case "$1" in
       -output "${REL_TO_ROOT}/pkg/{{.OS}}_{{.Arch}}/{{.Dir}}"
     ;;
   "test")
+    rm -fr ./testdata/src/*
+    rm -fr ./testdata/dest/*
     env ${TEST_ENVIRONMENT} go test ./... $2
     ;;
   "package")
