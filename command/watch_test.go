@@ -6,9 +6,10 @@ import (
 	"os"
 	"strings"
 	"testing"
-
-	"github.com/mitchellh/cli"
 	"time"
+
+	"bufio"
+	"github.com/mitchellh/cli"
 )
 
 func SetTestEnv(key, newValue string) func() {
@@ -31,6 +32,89 @@ func NewTestMeta(outStream, errStream io.Writer, inStream io.Reader) *Meta {
 		}}
 }
 
+func AssertFileExists(p string, t *testing.T) {
+
+	_, err := os.Stat(p)
+	if err != nil {
+		t.Fatalf("not found %q", p)
+	}
+}
+
+func AssertFileNotExists(p string, t *testing.T) {
+
+	_, err := os.Stat(p)
+	if err == nil {
+		t.Fatalf("found %q", p)
+	}
+}
+
+func AssertFileContent(p, expected string, t *testing.T) {
+
+	fd, err := os.Open(p)
+	if err != nil {
+		t.Fatalf("failed to open %q", p)
+	}
+	defer fd.Close()
+
+	actual := ""
+
+	scanner := bufio.NewScanner(fd)
+	for scanner.Scan() {
+		actual += scanner.Text()
+	}
+	if scanner.Err() != nil {
+		t.Fatalf("failed to scan %q", p)
+	}
+
+	if actual != expected {
+		t.Fatalf("content is %q, but want %q", actual, expected)
+	}
+}
+
+func CreateFileUnderTestDataDir(p string, t *testing.T) {
+	fd, err := os.Create(p)
+	if err != nil {
+		t.Fatalf("err must be nil, but %+v", err)
+	}
+	defer fd.Close()
+
+	time.Sleep(10 * time.Millisecond)
+}
+
+func WriteFileUnderTestDataDir(p, content string, t *testing.T) {
+	fd, err := os.OpenFile(p, os.O_WRONLY, 0600)
+	if err != nil {
+		t.Fatalf("err must be nil, but %+v", err)
+	}
+	defer fd.Close()
+
+	fd.WriteString(content)
+	err = fd.Sync()
+	if err != nil {
+		t.Fatalf("err must be nil, but %+v", err)
+	}
+
+	time.Sleep(10 * time.Millisecond)
+}
+
+func DeleteFileUnderTestDataDir(p string, t *testing.T) {
+	err := os.Remove(p)
+	if err != nil {
+		t.Fatalf("err must be nil, but %+v", err)
+	}
+
+	time.Sleep(10 * time.Millisecond)
+}
+
+func RenameFileUnderTestDataDir(p, q string, t *testing.T) {
+	err := os.Rename(p, q)
+	if err != nil {
+		t.Fatalf("err must be nil, but %+v", err)
+	}
+
+	time.Sleep(10 * time.Millisecond)
+}
+
 func TestWatchCommand__no_recursive(t *testing.T) {
 
 	go func() {
@@ -48,28 +132,21 @@ func TestWatchCommand__no_recursive(t *testing.T) {
 			t.Log(errStream.String())
 		}
 
+		command.chanToTrapCtrlC()
 		if ExitCode(exitStatus) != ExitCodeOK {
 			t.Fatalf("ExitStatus is %s, but want %s", ExitCode(exitStatus), ExitCodeOK)
 		}
 	}()
 
-	creator := func(p string) {
-		fd, err := os.Create(p)
-		if err != nil {
-			t.Fatalf("err must be nil, but %+v", err)
-		}
-		defer fd.Close()
-	}
+	CreateFileUnderTestDataDir("../testdata/src/foo", t)
+	AssertFileExists("../testdata/dest/foo", t)
 
-	checker := func(p string) {
-		time.Sleep(10 * time.Millisecond)
+	WriteFileUnderTestDataDir("../testdata/src/foo", "dummy", t)
+	AssertFileContent("../testdata/dest/foo", "dummy", t)
 
-		_, err := os.Stat(p)
-		if err != nil {
-			t.Fatalf("missing %q", p)
-		}
-	}
+	RenameFileUnderTestDataDir("../testdata/src/foo", "../testdata/src/bar", t)
+	AssertFileExists("../testdata/dest/bar", t)
 
-	creator("../testdata/src/foo")
-	checker("../testdata/dest/foo")
+	DeleteFileUnderTestDataDir("../testdata/src/bar", t)
+	AssertFileNotExists("../testdata/dest/bar", t)
 }
