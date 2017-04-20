@@ -1,3 +1,15 @@
+## 0.1.2 (2017-04-20)
+
+### Added
+
+- Define environmental variables
+  - `LSYNC_DEBUG`
+  - `LSYNC_LONG_RUN_TEST`
+
+### Fixed
+
+- Fix test environment problem
+
 ## 0.1.1 (2017-04-15)
 
 ### Fixed
