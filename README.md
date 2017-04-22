@@ -11,14 +11,21 @@ This is a tool to synchronize two local directories.
 
 ## Usage
 
+### Watch file system events of the specified directory
+
 ```bash
-$ lsync watch --src /path/to/src --dest /path/to/dest
+$ lsync -watch -h
+usage: lsync [--version] [--help] <command> [<args>]
 
-$ lsync start --src /path/to/src --dest /path/to/dest --verbose
-
-$ lsync start --src /path/to/src --dest /path/to/dest --recursive
-
+Available commands are:
+    version    Print lsync version and quit
+    watch      Watch file system events of the specified directory
 ```
+
+### Environment Variables
+
+- `LSYNC_DEBUG`: whether or not print stack trace at error.
+- `LSYNC_LONG_RUN_TEST`: execute long-run test.
 
 ## Install
 
@@ -39,6 +46,10 @@ Or get binary from [release page](../../releases/latest).
 1. Run test suite with the `go test ./...` command and confirm that it passes
 1. Run `gofmt -s`
 1. Create a new Pull Request
+
+## License
+
+MIT
 
 ## Author
 
