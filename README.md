@@ -32,7 +32,7 @@ Available commands are:
 To install, use `go get`:
 
 ```bash
-$ go get -d github.com/ohtomi/go-localsync/lsync
+$ go get -u github.com/ohtomi/go-localsync/lsync
 ```
 
 Or get binary from [release page](../../releases/latest).
